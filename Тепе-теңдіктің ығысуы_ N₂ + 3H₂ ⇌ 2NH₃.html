@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="kk"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Тепе-теңдіктің ығысуы: N₂ + 3H₂ ⇌ 2NH₃</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--card:#131c2e;--line:#243049;--tx:#e6ecf5;--mut:#8fa0bd;--n:#60a5fa;--h:#f1f5f9;--a:#c084fc;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:12px}
+.by{text-align:center;font-weight:700;font-size:13px;letter-spacing:.06em;color:#34d399;margin:2px 0 6px}
+h1{font-size:19px;margin:4px 0 2px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:10px}
+canvas{width:100%;height:auto;display:block;background:#0e1626;border:1px solid var(--line);border-radius:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:10px}
+h2{font-size:14px;margin:0 0 8px;color:var(--mut);font-weight:600}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+button{font:inherit;color:var(--tx);background:#1c2842;border:1px solid #2f3f63;border-radius:10px;padding:10px 6px;cursor:pointer;touch-action:manipulation}
+button:active{transform:scale(.97);background:#26365a}
+.up{border-color:#2e7d5b}.dn{border-color:#8a4a4a}
+.badge{display:none}
+#stk{position:sticky;top:0;z-index:10;background:var(--bg);margin:0 -12px;padding:6px 12px}
+#stk canvas+canvas{margin-top:4px}
+#dirrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--mut);margin-top:5px}
+#dirrow #dir{padding:3px 10px;font-size:13px}
+.badge{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+#dir{padding:6px 12px;border-radius:999px;font-weight:700;background:#1f2a44}
+#dir.r{background:#14532d;color:#86efac}#dir.l{background:#7c2d12;color:#fdba74}
+.stats{display:flex;gap:14px;flex-wrap:wrap;color:var(--mut);font-size:13px;margin-top:8px}
+.stats b{color:var(--tx);font-weight:600}
+#why{min-height:60px}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;margin-bottom:6px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+</style></head><body><div class="wrap">
+<div class="by">made by Dias Sempai</div>
+<h1>N₂ + 3H₂ ⇌ 2NH₃ &nbsp;<small style="color:var(--mut);font-weight:400">ΔH = −92 кДж (экзотермиялық)</small></h1>
+<div class="sub">Ле Шателье принципі: батырмаларды басып, тепе-теңдіктің қай жаққа ығысатынын бақылаңыз.</div>
+<div id="stk"><canvas id="sim" width="700" height="330"></canvas><canvas id="bal" width="700" height="190"></canvas><div id="dirrow"><span>⚖️ Қазір ығысу:</span><span id="dir">⇌ тепе-теңдік</span></div></div>
+<div class="card">
+  <div class="stats"><span>Q = <b id="q"></b></span><span>K = <b id="k"></b></span><span>T = <b id="t"></b></span><span>Қысым (сал.) = <b id="p"></b></span></div>
+</div>
+<div class="card"><h2>1. Концентрация</h2><div class="g3" id="gc"></div></div>
+<div class="card"><h2>2. Температура</h2><div class="g2"><button class="up" id="tu">🔥 Көтеру (+50 K)</button><button class="dn" id="td">❄️ Төмендету (−50 K)</button></div></div>
+<div class="card"><h2>3. Қысым (поршень көлемді өзгертеді)</h2><div class="g2"><button class="up" id="pu">⬇ Көтеру (сығу)</button><button class="dn" id="pd">⬆ Төмендету (кеңейту)</button></div></div>
+<div class="card"><h2>Түсіндірме</h2><div id="why">Жоғарыдан әсерді таңдаңыз. Сол жақта 4 моль газ (1 N₂ + 3 H₂), оң жақта 2 моль (2 NH₃).</div></div>
+<div class="card"><h2>Концентрацияның уақыт бойынша өзгеруі</h2>
+ <div class="lg"><span><i class="dot" style="background:var(--n)"></i>N₂ <b id="lN"></b></span><span><i class="dot" style="background:var(--h)"></i>H₂ <b id="lH"></b></span><span><i class="dot" style="background:var(--a)"></i>NH₃ <b id="lA"></b></span></div>
+ <canvas id="chart" width="700" height="190"></canvas>
+</div>
+<div class="card"><button id="rs" style="width:100%">↺ Бастапқы күйге қайтару</button></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const cv=$('sim'),cx=cv.getContext('2d'),ch=$('chart'),cc=ch.getContext('2d'),bl=$('bal'),cb=bl.getContext('2d');
+const COL={N:'#60a5fa',H:'#f1f5f9',A:'#c084fc'},NAME={N:'N₂',H:'H₂',A:'NH₃'};
+const VL=[0.5,0.7,1,1.4,2];
+const K0=196/(12*Math.pow(36,3));
+const Kf=()=>K0*Math.exp(11066*(1/T-1/700));
+const G=()=>{const s=Math.sqrt(Vd),w=160*s,h=150*s;return{w,h,xL:20,xR:680-w,yb:265,yt:265-h}};
+let n,V,Vd,T,vi,P,ghosts,hist,marks,time=0,lnr=0,Qv=0;
+function reset(){n={N:12,H:36,A:14};vi=2;V=1;Vd=1;T=700;P={N:[],H:[],A:[]};ghosts=[];hist=[];marks=[];sync(false)}
+const ox=(k,g)=>k=='A'?g.xR:g.xL;
+function spawn(k,fl){const g=G(),p={x:Math.random()*g.w,y:Math.random()*g.h,a:Math.random()*6.28,r:Math.random()*6.28,w:(Math.random()-.5)*2};P[k].push(p);if(fl)ghosts.push({k,x:p.x,y:p.y,c:COL[k],t:time,o:0})}
+function sync(fl=true){for(const k in P){const t=Math.min(220,Math.max(0,Math.round(n[k])));
+ while(P[k].length<t)spawn(k,fl);
+ while(P[k].length>t){const p=P[k].splice(Math.floor(Math.random()*P[k].length),1)[0];if(fl)ghosts.push({k,x:p.x,y:p.y,c:COL[k],t:time,o:1})}}}
+function step(dt){const ka=1.2*Math.sqrt(T/700);
+ const cN=n.N/Vd,cH=n.H/Vd,cA=n.A/Vd;
+ Qv=(cA*cA+1e-9)/(cN*cH**3+1e-9);
+ lnr=Math.max(-6,Math.min(6,Math.log(Kf()/Qv)));
+ let d=ka*lnr*dt;
+ d=d>0?Math.min(d,n.N,n.H/3):Math.max(d,-n.A/2);
+ n.N-=d;n.H-=3*d;n.A+=2*d}
+function move(dt){const sp=55*Math.sqrt(T/700),g=G();
+ for(const k in P)for(const p of P[k]){let vx=Math.cos(p.a),vy=Math.sin(p.a);
+  p.x+=vx*sp*dt;p.y+=vy*sp*dt;p.r+=p.w*dt*2;
+  if(p.x<8){p.x=8;p.a=Math.PI-p.a}if(p.x>g.w-8){p.x=g.w-8;p.a=Math.PI-p.a}
+  if(p.y<8){p.y=8;p.a=-p.a}if(p.y>g.h-8){p.y=g.h-8;p.a=-p.a}}}
+function circ(x,y,r,c){cx.beginPath();cx.arc(x,y,r,0,6.283);cx.fillStyle=c;cx.fill();cx.strokeStyle='rgba(0,0,0,.45)';cx.lineWidth=1;cx.stroke()}
+function mol(k,p,X,Y){cx.save();cx.translate(X+p.x,Y+p.y);cx.rotate(p.r);
+ if(k=='N'){circ(-5.5,0,6,COL.N);circ(5.5,0,6,COL.N)}
+ else if(k=='H'){circ(-3.5,0,3.8,COL.H);circ(3.5,0,3.8,COL.H)}
+ else{for(const a of[.52,2.62,4.71])circ(Math.cos(a)*9,Math.sin(a)*9,3.6,COL.H);circ(0,0,7,COL.A)}
+ cx.restore()}
+function mix(a,b,t){return a.map((v,i)=>Math.round(v+(b[i]-v)*t))}
+function arrow(x1,x2,y,c,lw){cx.strokeStyle=c;cx.fillStyle=c;cx.lineWidth=lw;cx.beginPath();cx.moveTo(x1,y);cx.lineTo(x2,y);cx.stroke();const d=Math.sign(x2-x1);cx.beginPath();cx.moveTo(x2+d*8,y);cx.lineTo(x2-d*4,y-7);cx.lineTo(x2-d*4,y+7);cx.fill()}
+function draw(){const g=G(),t=(T-500)/400,bg=mix([20,45,95],[110,28,28],t),hc=mix([60,130,246],[239,68,68],t);
+ cx.clearRect(0,0,700,330);cx.font='13px system-ui';
+ [[g.xL,'N₂ × '+P.N.length+'   H₂ × '+P.H.length,'Реагенттер'],[g.xR,'NH₃ × '+P.A.length,'Өнім']].forEach(([x,lb,ttl])=>{
+  cx.fillStyle=`rgb(${bg})`;cx.fillRect(x,g.yt,g.w,g.h);
+  cx.strokeStyle='#64748b';cx.lineWidth=3;cx.strokeRect(x,g.yt,g.w,g.h);
+  cx.fillStyle='#94a3b8';cx.fillRect(x-4,g.yt-12,g.w+8,10);cx.fillRect(x+g.w/2-4,g.yt-34,8,22);cx.fillRect(x+g.w/2-18,g.yt-40,36,7);
+  cx.fillStyle=`rgb(${hc})`;cx.fillRect(x,g.yb+8,g.w,10);
+  cx.fillStyle='#e6ecf5';cx.font='bold 13px system-ui';cx.fillText(ttl,x,g.yb+34);
+  cx.fillStyle='#cbd5e1';cx.font='13px system-ui';cx.fillText(lb,x,g.yb+51)});
+ cx.fillStyle='#8fa0bd';cx.fillText('T = '+T+' K     V = '+Vd.toFixed(2)+' (сал.)',20,18);
+ const my=g.yt+g.h/2;
+ arrow(310,390,my-14,lnr>.08?'#86efac':'#475569',lnr>.08?5:2);
+ arrow(390,310,my+14,lnr<-.08?'#fdba74':'#475569',lnr<-.08?5:2);
+ for(const k in P){const x=ox(k,g);cx.save();cx.beginPath();cx.rect(x,g.yt,g.w,g.h);cx.clip();
+  for(const p of P[k])mol(k,p,x,g.yt);cx.restore()}
+ ghosts=ghosts.filter(q=>time-q.t<.7);
+ for(const q of ghosts){const u=(time-q.t)/.7,r=q.o?4+u*18:22-u*18;
+  cx.beginPath();cx.arc(ox(q.k,g)+Math.min(q.x,g.w),g.yt+Math.min(q.y,g.h),Math.max(r,1),0,6.283);cx.strokeStyle=q.c;cx.globalAlpha=1-u;cx.lineWidth=2;cx.stroke();cx.globalAlpha=1}}
+let ang=0;
+function pan(x,y,items){cb.strokeStyle='#64748b';cb.lineWidth=2;cb.beginPath();cb.moveTo(x,y);cb.lineTo(x-60,y+42);cb.moveTo(x,y);cb.lineTo(x+60,y+42);cb.stroke();
+ cb.fillStyle='#94a3b8';cb.fillRect(x-65,y+42,130,7);
+ let i=0;for(const[c,m]of items)for(let j=0;j<Math.min(m,36);j++,i++){cb.beginPath();cb.arc(x-55+(i%12)*10,y+37-Math.floor(i/12)*10,4,0,6.283);cb.fillStyle=c;cb.fill()}}
+function drawBal(dt){const tg=Math.max(-1,Math.min(1,lnr/3))*.26;ang+=(tg-ang)*Math.min(1,dt*4);
+ const px=350,py=58,L=200;cb.clearRect(0,0,700,190);
+ cb.fillStyle='#475569';cb.beginPath();cb.moveTo(px,py);cb.lineTo(px-20,168);cb.lineTo(px+20,168);cb.fill();cb.fillRect(px-90,168,180,7);
+ const dx=Math.cos(ang)*L,dy=Math.sin(ang)*L;
+ pan(px-dx,py-dy,[[COL.N,Math.round(n.N)],[COL.H,Math.round(n.H)]]);
+ pan(px+dx,py+dy,[[COL.A,Math.round(n.A)]]);
+ cb.strokeStyle='#cbd5e1';cb.lineWidth=7;cb.lineCap='round';cb.beginPath();cb.moveTo(px-dx,py-dy);cb.lineTo(px+dx,py+dy);cb.stroke();cb.lineCap='butt';
+ cb.beginPath();cb.arc(px,py,8,0,6.283);cb.fillStyle='#e6ecf5';cb.fill();
+ cb.textAlign='center';cb.font='bold 13px system-ui';cb.fillStyle='#e6ecf5';
+ cb.fillText('Реагенттер N₂ + 3H₂',px-L,184);cb.fillText('Өнім 2NH₃',px+L,184);
+ const r=lnr>.08,l=lnr<-.08;cb.font='bold 14px system-ui';cb.fillStyle=r?'#86efac':l?'#fdba74':'#8fa0bd';
+ cb.fillText(r?'Оңға ығысу → (NH₃ артады)':l?'← Солға ығысу (N₂, H₂ артады)':'⇌ Тепе-теңдік',px,18);cb.textAlign='left'}
+function sample(){hist.push({t:time,N:n.N/Vd,H:n.H/Vd,A:n.A/Vd});while(hist.length&&time-hist[0].t>40)hist.shift()}
+function drawChart(){const W=700,H=190,l=30,b=18;cc.clearRect(0,0,W,H);
+ let mx=5;for(const h of hist)mx=Math.max(mx,h.N,h.H,h.A);mx*=1.1;
+ cc.strokeStyle='#243049';cc.fillStyle='#8fa0bd';cc.font='11px system-ui';cc.lineWidth=1;
+ for(let i=0;i<=4;i++){const y=8+(H-b-8)*i/4;cc.beginPath();cc.moveTo(l,y);cc.lineTo(W,y);cc.stroke();cc.fillText((mx*(1-i/4)).toFixed(0),2,y+4)}
+ const X=t=>l+(t-(time-40))/40*(W-l),Y=v=>8+(H-b-8)*(1-v/mx);
+ for(const m of marks){if(time-m.t>40)continue;const x=X(m.t);cc.setLineDash([4,3]);cc.strokeStyle='#64748b';cc.beginPath();cc.moveTo(x,8);cc.lineTo(x,H-b);cc.stroke();cc.setLineDash([]);cc.fillStyle='#cbd5e1';cc.fillText(m.l,Math.min(x+3,W-60),18)}
+ for(const k of['N','H','A']){cc.beginPath();cc.strokeStyle=COL[k];cc.lineWidth=2;
+  hist.forEach((h,i)=>{const x=X(h.t),y=Y(h[k]);i?cc.lineTo(x,y):cc.moveTo(x,y)});cc.stroke()}
+ cc.fillStyle='#8fa0bd';cc.fillText('← 40 с бұрын',l,H-3);cc.fillText('қазір',W-42,H-3)}
+function ui(){$('lN').textContent=(n.N/Vd).toFixed(1);$('lH').textContent=(n.H/Vd).toFixed(1);$('lA').textContent=(n.A/Vd).toFixed(1);
+ $('q').textContent=Qv.toExponential(2);$('k').textContent=Kf().toExponential(2);$('t').textContent=T+' K';
+ $('p').textContent=((n.N+n.H+n.A)/Vd*(T/700)/62).toFixed(2);
+ const d=$('dir');
+ if(lnr>.08){d.className='r';d.textContent='→ оңға (NH₃ көп)'}
+ else if(lnr<-.08){d.className='l';d.textContent='← солға (N₂, H₂ көп)'}
+ else{d.className='';d.textContent='⇌ тепе-теңдік'}}
+function act(label,fn,txt){fn();marks.push({t:time,l:label});$('why').innerHTML=txt;sync()}
+// concentration buttons
+const gc=$('gc');
+['N','H','A'].forEach(k=>{const dn={N:4,H:12,A:6}[k],div=document.createElement('div');div.style.cssText='display:grid;gap:8px';
+ [['+',1],['−',-1]].forEach(([s,sg])=>{const b=document.createElement('button');b.textContent=s+' '+NAME[k];b.className=sg>0?'up':'dn';
+  b.onclick=()=>{const inc=sg>0,right=(inc&&k!='A')||(!inc&&k=='A'),nm=NAME[k];
+   const txt=(inc?`<b>${nm}</b> қосылды: оның концентрациясы артты. Жүйе әсерге қарсы әрекет етіп, ${nm} затын жұмсайды`:`<b>${nm}</b> алынды: оның концентрациясы азайды. Жүйе әсерге қарсы әрекет етіп, ${nm} затын толықтырады`)+` — тепе-теңдік <b>${right?'оңға (→)':'солға (←)'}</b> ығысады.`;
+   act(s+nm,()=>{n[k]=Math.max(0,n[k]+sg*dn)},txt)};
+  div.appendChild(b)});gc.appendChild(div)});
+$('tu').onclick=()=>{if(T>=900)return $('why').textContent='Температураның жоғарғы шегіне жеттік (900 K).';
+ act('T↑',()=>{T+=50},'Жүйені <b>қыздырдық</b>. Тура реакция экзотермиялық (ΔH = −92 кДж), сондықтан жүйе жылуды сіңіріп, кері (эндотермиялық) реакцияны күшейтеді: тепе-теңдік <b>солға (←)</b> ығысады. K азаяды.')};
+$('td').onclick=()=>{if(T<=500)return $('why').textContent='Температураның төменгі шегіне жеттік (500 K).';
+ act('T↓',()=>{T-=50},'Жүйені <b>суыттық</b>. Жүйе жылу бөлуге ұмтылады — тура экзотермиялық реакция күшейеді: тепе-теңдік <b>оңға (→)</b> ығысады. K артады.')};
+$('pu').onclick=()=>{if(vi==0)return $('why').textContent='Сығудың шегіне жеттік.';
+ act('P↑',()=>{vi--;V=VL[vi]},'<b>Қысымды көтердік</b> (көлемді азайттық). Жүйе қысымды азайту үшін газ молекулаларының санын азайтады: сол жақта 4 моль, оң жақта 2 моль — тепе-теңдік <b>оңға (→)</b>, NH₃ жағына ығысады.')};
+$('pd').onclick=()=>{if(vi==4)return $('why').textContent='Кеңейтудің шегіне жеттік.';
+ act('P↓',()=>{vi++;V=VL[vi]},'<b>Қысымды төмендеттік</b> (көлемді арттырдық). Жүйе қысымды көтеру үшін газ молекулаларының санын арттырады: тепе-теңдік <b>солға (←)</b>, N₂ мен H₂ жағына ығысады.')};
+$('rs').onclick=()=>{reset();$('why').textContent='Жүйе бастапқы тепе-теңдікке қайтарылды.'};
+reset();
+let last=performance.now(),acc=0;
+function frame(now){const dt=Math.min(.05,(now-last)/1000);last=now;time+=dt;
+ Vd+=(VL[vi]-Vd)*Math.min(1,dt*6);
+ step(dt);sync();move(dt);draw();drawBal(dt);
+ acc+=dt;if(acc>.1){acc=0;sample();ui();drawChart()}
+ requestAnimationFrame(frame)}
+requestAnimationFrame(frame);
+</script></body></html>
